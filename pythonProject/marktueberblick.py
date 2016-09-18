@@ -1,14 +1,20 @@
 import tkinter as tk
 import re
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from tkinter import messagebox
+import urllib
+from urllib.error import HTTPError
+import numpy
+import matplotlib.dates as mDates
+import matplotlib.pyplot as mPyplot
+import matplotlib.ticker as mTicker
+
 
 LARGE_FONT = ("Verdana", 12)
 
 class Main (tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
-        container = tk.Frame(self.geometry("800x750"))
+        container = tk.Frame(self.geometry("800x150"))
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
@@ -26,50 +32,53 @@ class TBD(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-def additionalInformation(data, varFirstTrade, varCurrency, varLowPrice, varHighPrice):
-    reLowPrice = re.search("low:(.+?),", data)
-    if reLowPrice:
-        varLowPrice.set('Lowest price:'+reLowPrice.group(1))
-    reHighPrice = re.search("previous_close_price:(.*)", data)
-    if reHighPrice:
-        varHighPrice.set('Previous close price:'+reHighPrice.group(1))
+def additionalInformation(data):
+    reCompanyName = re.search("Company-Name:(.*)", data)
+    #print (data)
+    #print (reCompanyName)
+    if reCompanyName:
+        additionalData = "Company-Name:" + reCompanyName.group(1)+"\n"
+
+    reExchangeName = re.search("Exchange-Name:(.*)", data)
+    if reExchangeName:
+        additionalData = additionalData + "Exchange-Name:" + reExchangeName.group(1) +"\n"
+
+    reFirstTrade = re.search("first-trade:(.*)", data)
+    if reFirstTrade:
+        additionalData = additionalData + "First-trade:" + reFirstTrade.group(1) +"\n"
+
+    reLastTrade = re.search("last-trade:(.*)", data)
+    if reLastTrade:
+        additionalData = additionalData + "Last-trade:" + reLastTrade.group(1) +"\n"
+
     reCurrency = re.search("currency:(.*)", data)
     if reCurrency:
-        varCurrency.set('Currency:'+reCurrency.group(1))
-    FirstTrade = re.search("first-trade:(.*)", data)
-    if FirstTrade:
-        varFirstTrade.set('First-Trade:'+FirstTrade.group(1))
+        additionalData = additionalData + "Currency:" + reCurrency.group(1) +"\n"
+
+    rePrClosePrice = re.search("previous_close_price:(.*)", data)
+    if rePrClosePrice:
+        additionalData =  additionalData + "Previous close price:" + rePrClosePrice.group(1) +" "+ reCurrency.group(1)+"\n"
+
+    #reLowPrice = re.search("low:(.+?),", data)
+    #if reLowPrice:
+    #    additionalData = reLowPrice
+    #print ("-----------------------------")
+
+    #print (additionalData)
+    return additionalData
+
 
 class GraphPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        varCompanyName  = tk.StringVar()
-        companyName = tk.Label(self,textvariable=varCompanyName)
-        varCompanyName.set('Company Name:')
-        varLowPrice = tk.StringVar()
-        lowPrice = tk.Label(self,textvariable=varLowPrice)
-        varLowPrice.set('Lowest price:')
-        varHighPrice = tk.StringVar()
-        highPrice = tk.Label(self,textvariable=varHighPrice)
-        varHighPrice.set('Previous close price:')
-        varCurrency = tk.StringVar()
-        currency = tk.Label(self,textvariable=varCurrency)
-        varCurrency.set('Currency:')
-        varFirstTrade = tk.StringVar()
-        firstTrade = tk.Label(self,textvariable=varFirstTrade)
-        varFirstTrade.set('First Trade:')
         optionVariable = tk.StringVar(self)
         optionVariable.set('1m')
         optionMenu = tk.OptionMenu(self, optionVariable, '1m','3m','6m','1y','2y','5y','10y')
         label = tk.Label(self, text='Market Graph Builder', font=LARGE_FONT)
-        search = tk.Button(self, text='Search')
-        search.pack()
-        search.place(x=445,y=30)
+        searchButton = tk.Button(self, text="Search",command=lambda: marketGraph(IndexEntry.get(),optionVariable.get()))
+        searchButton.pack()
+        searchButton.place(x=445,y=30)
         label.pack(pady=10,padx=10)
-        fig = Figure (figsize=(8,6), dpi=100)
-        graph = fig.add_subplot(111)
-        canvas = FigureCanvasTkAgg(fig,self)
-        toolbar= NavigationToolbar2TkAgg(canvas,self)
         label2 = tk.Label(self, text="Market Index:")
         label3 = tk.Label(self, text="Time period:")
         IndexEntry=tk.Entry(self)
@@ -77,10 +86,88 @@ class GraphPage(tk.Frame):
         label3.place(x=210,y=65)
         IndexEntry.place(x=80,y=65)
         optionMenu.place(x=285,y=60)
-        companyName.place(x=4,y=96)
-        lowPrice.place(x=150,y=96)
-        highPrice.place(x=320,y=96)
-        currency.place(x=450,y=96)
-        firstTrade.place(x=520,y=96)
+
+#percent of price change during the day(open and close price)
+def procentOfDayChangePrice(openp, closep):
+    return (closep*100/openp)-100
+
+def datestr2num(fmt, encoding='utf-8'):
+    strConverter = mDates.strpdate2num(fmt)
+    def bytesConverter(b):
+        s = b.decode(encoding)
+        return strConverter(s)
+    return bytesConverter
+
+def marketGraph(MarketIndex,optionMenu):
+    stockPriceURL = 'http://chartapi.finance.yahoo.com/instrument/1.0/'+"GOOG"+'/chartdata;type=quote;range='+optionMenu+'/csv'
+    try:
+        data = urllib.request.urlopen(stockPriceURL).read().decode()
+    except HTTPError as e:
+        print('Error code: ', e.code)
+        messagebox.showinfo('Error', 'Index not found. you can type z. B.: BAC or AAPL...etc.')
+    else:
+        if 'message:No symbol found - symbol' not in data:
+
+            fig = mPyplot.figure(figsize=(8.0, 8.0),facecolor='#f0f0f0')
+            graph1 = mPyplot.subplot2grid((6,1), (0,0), rowspan=1, colspan=1)
+            mPyplot.title(MarketIndex+" Charts" + "(" + optionMenu +")", color='#115252')
+            mPyplot.ylabel('%')
+            graph2 = mPyplot.subplot2grid((6,1), (1,0), rowspan=4, colspan=1, sharex=graph1)
+            mPyplot.ylabel('Price')
+            graph3 = mPyplot.subplot2grid((6,1), (5,0), rowspan=1, colspan=1, sharex=graph1)
+            mPyplot.ylabel('Volume')
+
+            marketData = []
+            splitSource = data.split('\n')
+            for line in splitSource:
+                split_line = line.split(',')
+                # more than 6 elements in row and exclude row with "labels" and "values" from result
+                if len(split_line) == 6:
+                    if 'labels' not in line and 'values' not in line:
+                        marketData.append(line)
+
+            date, closep, highp, lowp, openp, volume = numpy.loadtxt(marketData, delimiter=',', unpack=True, converters={0: datestr2num('%Y%m%d')})
+
+            # percent of price change during the day
+            priceChangesDuringTheDay = list(map(procentOfDayChangePrice, closep, openp))
+            graph1.plot(date,priceChangesDuringTheDay,'-', label='percent of price change during the day')
+            graph1.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune='lower'))
+
+            graph2.plot(date, highp, linewidth=1, label='high')
+            graph2.plot(date, lowp, linewidth=1, label='low')
+            graph2.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune='upper'))
+
+            graph3.plot(date,volume,'-', label='volume')
+            graph3.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune='lower'))
+
+            graph3.xaxis.set_major_formatter(mDates.DateFormatter('%Y-%m-%d'))
+            graph3.xaxis.set_major_locator(mTicker.MaxNLocator(10))
+            graph3.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune='upper'))
+
+            for label in graph3.xaxis.get_ticklabels():
+                label.set_rotation(15)
+
+            mPyplot.setp(graph1.get_xticklabels(), visible=False)
+            mPyplot.setp(graph2.get_xticklabels(), visible=False)
+            mPyplot.subplots_adjust(left=0.11, bottom=0.24, right=0.90, top=0.90, wspace=0.2, hspace=0)
+
+            graph1.legend()
+            leg = graph1.legend(loc=9, ncol=2,prop={'size':10})
+            leg.get_frame().set_alpha(0.4)
+
+            graph2.legend()
+            leg = graph2.legend(loc=9, ncol=2,prop={'size':10})
+            leg.get_frame().set_alpha(0.4)
+
+            graph3.legend()
+            leg = graph3.legend(loc=9, ncol=2,prop={'size':10})
+            leg.get_frame().set_alpha(0.4)
+
+            mPyplot.figtext(.1, .0, "\n \n \n \n \n"+ additionalInformation(data))
+
+            mPyplot.show()
+            fig.savefig(MarketIndex +'.png', facecolor=fig.get_facecolor())
+        else:
+                messagebox.showinfo('Error', 'Index not found. you can type z. B.: BAC or AAPL...etc.')
 app = Main()
 app.mainloop()
