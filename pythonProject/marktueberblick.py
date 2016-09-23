@@ -7,10 +7,7 @@ import numpy
 import matplotlib.dates as mDates
 import matplotlib.pyplot as mPyplot
 import matplotlib.ticker as mTicker
-
 import datetime
-
-from matplotlib.finance import volume_overlay
 from matplotlib.finance import candlestick_ohlc
 
 
@@ -19,12 +16,12 @@ LARGE_FONT = ("Verdana", 12)
 class Main (tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
+        #create object main Frame
         container = tk.Frame(self.geometry("600x150"))
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
         self.frames = {}
-
         # tuple of all Frames in application
         for F in (HomePage,GraphPage,HelpPage):
           frame = F(container, self)
@@ -35,11 +32,15 @@ class Main (tk.Tk):
         frame = self.frames[cont]
         frame.tkraise()
 
+
 class HomePage(tk.Frame):
+    # HomePage Frame
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
+        #create object lebel and placing it in the Frame
         label = tk.Label(self, text="Home Page", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
+        #create object Button and placing it in the Frame
         button3 = tk.Button(self, text="Market graph",
                             command=lambda: controller.show_frame(GraphPage))
         button3.pack()
@@ -50,10 +51,13 @@ class HomePage(tk.Frame):
 
 
 class HelpPage(tk.Frame):
+    # Help Frame
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
+        #create object lebel and placing it in the Frame
         label = tk.Label(self, text="Info.", font=LARGE_FONT)
         label.pack(pady=4,padx=10)
+        #create object Text and placing it in the Frame
         objText=tk.Text(self, height=6, width=67)
         objText.pack()
         objText.insert('end', "Yahoo Finance provide some possibility to do search by Index on the\n"
@@ -62,9 +66,11 @@ class HelpPage(tk.Frame):
                               "\nFor example BMW.MI to do serch on milan Stock/BMW.F farnkfurt Stock"
                               "\nLiast of all Yahoo suffix : http://www.jarloo.com/yahoo_finance/"
                               "\nGoogle finance doesn't work with such of suffix! ")
+        #create object Text and placing it in the Help Frame
         button = tk.Button(self, text="Home Page", command=lambda: controller.show_frame(HomePage))
         button.pack()
 
+#parse response(from "Company-Name:" to end row) of our request to Finance service .
 def additionalInformationCompanyName(data):
     if "Company-Name:" in data:
         reCompanyName = re.search("Company-Name:(.*)", data)
@@ -74,6 +80,7 @@ def additionalInformationCompanyName(data):
     return reCompanyName
 
 
+#parse response of our request.
 def additionalInformation(data):
     additionalData =""
     reExchangeName = re.search("Exchange-Name:(.*)", data)
@@ -108,8 +115,11 @@ class GraphPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+
+        #Event of select OptionMenu(Company name)
         def autoFillIndexEntry(event):
             selected = optionIntervalCompanie.get()
+            #set marketindex(for example "GOOG") to IndexEntry if true
             if selected == "Google(Alphabet Inc.)":
                 IndexEntry.delete(0, 'end')
                 IndexEntry.insert(0,"GOOG")
@@ -128,29 +138,30 @@ class GraphPage(tk.Frame):
             elif selected == "Volkswagen Group":
                 IndexEntry.delete(0, 'end')
                 IndexEntry.insert(0,"VLKAY")
-
+        # default value of OptionMenu "Company name"
         optionIntervalVariable = tk.StringVar(self)
         optionIntervalVariable.set('1m')
 
+        # default value of OptionMenu "Period"
         optionIntervalCompanie = tk.StringVar(self)
         optionIntervalCompanie.set('')
 
-        #Objects
+        #Objects OptionMenu
         optionIntervalMenu  = tk.OptionMenu(self,  optionIntervalVariable, '1m','3m','6m','1y','2y','5y','10y')
         optionCompaniesMenu = tk.OptionMenu(self,  optionIntervalCompanie, "Google(Alphabet Inc.)", "Apple Inc." ,
                                             "Deutsche Bank AG","Barclays", "Nintendo Co., Ltd.","Volkswagen Group",
                                             command=autoFillIndexEntry)
-
+        #Objects Button
         searchYahooFinance = tk.Button(self, text="Yahoo Finance ",
                                        command=lambda: marketGraph(IndexEntry.get(),optionIntervalVariable.get(),"Yahoo"))
         searchGoogleFinance = tk.Button(self, text="Google Finance",
                                         command=lambda: marketGraph(IndexEntry.get(),optionIntervalVariable.get(),"Google"))
-
+        #Objects Label
         labeTitel = tk.Label(self, text='Market Graph Builder', font=LARGE_FONT)
         labelMarketIndex = tk.Label(self, text="Market Index:")
         labelTimeperiod = tk.Label(self, text="Time period:")
         labelCompany = tk.Label(self, text="Company name:")
-
+        #Objects Entry
         IndexEntry=tk.Entry(self)
 
         #American Stock Exchange	N/A
@@ -160,16 +171,17 @@ class GraphPage(tk.Frame):
         #New York Stock Exchange	N/A
         #S & P Indices	N/A
         #Nikkei Indices	N/A
-
+        #placing objects to the Frame
         searchYahooFinance.pack()
         searchGoogleFinance.pack()
 
-        #Entry position (x,y)
+        #position of Entry on frame position (x,y)
         IndexEntry.place(x=80,y=65)
 
         #labels position (x,y)
         labeTitel.pack(pady=10,padx=10)
         labelMarketIndex.place(x=2,y=65)
+
 
         labelCompany.place(x=210,y=50)
         labelTimeperiod.place(x=210,y=80)
@@ -183,8 +195,18 @@ class GraphPage(tk.Frame):
         searchGoogleFinance.place(x=475,y=80)
 
 #percent of price change during the day(open and close price)
-def procentOfDayChangePrice(openp, closep):
-    return (closep*100/openp)-100
+def procentOfDayChangePrice(openPrice, closePrice):
+    return (closePrice*100/openPrice)-100
+
+#ohlc Graph
+def ohlcGraph(iterrator, date,openPrice,highPrice,lowPrice,closePrice,volume):
+    ohlcData = []
+    iterrator2 = 0
+    while iterrator2 < iterrator:
+        listTmp = date[iterrator2], openPrice[iterrator2], highPrice[iterrator2], lowPrice[iterrator2], closePrice[iterrator2], volume[iterrator2]
+        ohlcData.append(listTmp)
+        iterrator2 +=1
+    return ohlcData
 
 #def getData(MarketIndex,optionMenu,source):
 
@@ -200,27 +222,35 @@ def prepareURL(MarketIndex,optionMenu,source):
     else:
         if "y" in optionMenu:
             graphInterval= optionMenu.replace("y", "Y")
-            print(graphInterval)
+           # print(graphInterval)
         else:
             graphInterval= str(int(optionMenu.replace("m", "")) * 30) + "d"
-            print(graphInterval)
+            #print(graphInterval)
         stockPriceURL = 'https://www.google.com/finance/getprices?q=' + MarketIndex + \
                         '&i=86401&p=' + graphInterval + '&f=d,o,h,l,c,v'
     return stockPriceURL
 
 
 def marketGraph(MarketIndex,optionMenu,source):
+    #set default format
     dateFormat = "%Y%m%d"
+
+    # request to external service with exception validation
     try:
         data = urllib.request.urlopen(prepareURL(MarketIndex,optionMenu,source)).read().decode("utf-8")
+
+    # check error
     except HTTPError as e:
         print('Error code: ', e.code)
         messagebox.showinfo('Error', 'Index not found. you can type z. B.: BAC or AAPL...etc.')
     else:
+        # check that response valid(dont have "No symbol found - symbol" and "EXCHANGE%3DUNKNOWN+EXCHANGE")
         if 'message:No symbol found - symbol' not in data and 'EXCHANGE%3DUNKNOWN+EXCHANGE' not in data :
             fig = mPyplot.figure(figsize=(8.0, 8.0),facecolor='#f0f0f0')
             graph1 = mPyplot.subplot2grid((6,1), (0,0), rowspan=1, colspan=1)
+            #title of frame(get name of company name from funktion additionalInformationCompanyName)
             mPyplot.title(additionalInformationCompanyName(data)+ MarketIndex +"(" + optionMenu +")", color='#115252')
+            #Y label of first graph
             mPyplot.ylabel('%')
             graph2 = mPyplot.subplot2grid((6,1), (1,0), rowspan=4, colspan=1, sharex=graph1)
             mPyplot.ylabel('Price')
@@ -229,63 +259,63 @@ def marketGraph(MarketIndex,optionMenu,source):
             marketData = []
             #dateGraph = []
             #ohlc = []
+
+            #split string to rows
             splitSource = data.split('\n')
-            #print (splitSource)
-            i=0
+
+            iterrator=0
             for line in splitSource:
 
-                split_line = line.split(',')
+                splitLine = line.split(',')
                 # more than 6 elements in row and exclude row with "labels" and "values" from result
-                if len(split_line) == 6:
+                if len(splitLine)== 6:
                     if 'labels' not in line and 'values' not in line and len(source)==5:
-                        i+=1
+                        iterrator+=1
                         marketData.append(datetime.datetime.strptime(line[0:8],"%Y%m%d").strftime(dateFormat)+ line[8:]+",1")
                     elif "COLUMNS" not in line and "DATA_SESSIONS" not in line and len(source)==6  :
-                        i+=1
-                        marketData.append(datetime.datetime.fromtimestamp(int(line[1:11])).strftime(dateFormat)+ line[11:]+","+str(i))
-
-            date, closep, highp, lowp, openp, volume, rowN = numpy.loadtxt(marketData, delimiter=',',
+                        iterrator+=1
+                        marketData.append(datetime.datetime.fromtimestamp(int(line[1:11])).strftime(dateFormat)+ line[11:]+","+str(iterrator))
+            #division of our marketData list to separated elements(date, closePrice, highPrice)
+            date, closePrice, highPrice, lowPrice, openPrice, volume, rowNumber = numpy.loadtxt(marketData, delimiter=',',
                                                                            unpack=True, converters={0:  datestr2num(dateFormat)})
 
-            iterrator2 = 0
-            ohlc = []
-            while iterrator2 < i:
-                listTmp = date[iterrator2], openp[iterrator2], highp[iterrator2], lowp[iterrator2], closep[iterrator2], volume[iterrator2]
-                print(listTmp)
-                ohlc.append(listTmp)
-                iterrator2 +=1
-                rowN=date
 
-            priceChangesDuringTheDay = list(map(procentOfDayChangePrice, closep, openp))
-            graph1.plot_date(rowN,priceChangesDuringTheDay,'-', label="percent of price change during the day")
+            priceChangesDuringTheDay = list(map(procentOfDayChangePrice, closePrice, openPrice))
+            #create price Changes graph During The Day
+            graph1.plot_date(date,priceChangesDuringTheDay,'-', label="percent of price change during the day")
             graph1.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune="lower"))
 
+
+            #create ohlc graph with list of iterrator, date,openPrice,highPrice,lowPrice,closePrice,volume
             #quotes : sequence of (time, open, high, low, close, ...) sequences
-            candlestick_ohlc(graph2, ohlc, width=0.3, colorup='#ade7ae', colordown='#E57878')
+            candlestick_ohlc(graph2, ohlcGraph(iterrator, date,openPrice,highPrice,lowPrice,closePrice,volume), width=0.3, colorup='#ade7ae', colordown='#E57878')
             graph2.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=7, prune='upper'))
             graph2.grid(True)
 
-            graph3.plot_date(rowN,volume,'-', label="Volume")
+            graph3.plot_date(date,volume,'-', label="Volume")
             graph3.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune="lower"))
 
-            graph3.fill_between(rowN,0, volume, facecolor='#4CA1BE', alpha=0.3)
+            graph3.fill_between(date,0, volume, facecolor='#4CA1BE', alpha=0.3)
+            #disable gride of grap
             graph3.grid(False)
             graph3.set_ylim(0, 4*volume.max())
 
-            if len(source)==5:
-                graph3.xaxis.set_major_formatter(mDates.DateFormatter(dateFormat))
-            else:
-                graph3.xaxis.set_major_formatter(mDates.DateFormatter(dateFormat))
+            #formating to date
+            graph3.xaxis.set_major_formatter(mDates.DateFormatter(dateFormat))
+
             graph3.xaxis.set_major_locator(mTicker.MaxNLocator(10))
             graph3.yaxis.set_major_locator(mTicker.MaxNLocator(nbins=4, prune="upper"))
             for label in graph3.xaxis.get_ticklabels():
                 label.set_rotation(45)
+            #disable of Y
             mPyplot.setp(graph1.get_xticklabels(), visible=False)
             mPyplot.setp(graph2.get_xticklabels(), visible=False)
             mPyplot.subplots_adjust(left=0.11, bottom=0.23, right=0.95, top=0.95, wspace=0.2, hspace=0)
             mPyplot.figtext(.1, .0, ""+ additionalInformation(data))
             mPyplot.show()
+
         else:
                 messagebox.showinfo("Error", "Index not found. you can type z. B.: BAC or AAPL...etc.")
+
 app = Main()
 app.mainloop()
