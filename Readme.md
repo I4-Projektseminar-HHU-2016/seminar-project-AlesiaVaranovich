@@ -1,6 +1,6 @@
-# Marktueberblick
+# Market Analysis Tool
 
-The project for analyze market data and graph visualization from different platforms 
+The project for analysis of market data and graph visualization from different platforms
 
 ##Features
 - [x] simple and easily understandable GUI
@@ -25,10 +25,10 @@ The following instruction will help you to successfully install/run this applica
 
 ### Installing
 
-To start this application you need to execute analysis.py. Open to windows command line and run the following command:
+To start this application you need to execute analysis.py. Open the windows command line and run the following command:
 
 ```
-phyton path_to_file\analysis.py
+python path_to_file\analysis.py
 ``` 
 
 ## Versioning
@@ -42,3 +42,7 @@ Distributed version control system  [Git](https://git-scm.com/) for versioning.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+
+
+*template inspired by [https://gist.github.com/PurpleBooth/109311bb0361f32d87a2](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)*
